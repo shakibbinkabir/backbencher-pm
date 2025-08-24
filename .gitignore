@@ -1,0 +1,23 @@
+# Node
+node_modules
+dist
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+
+# Env
+.env
+.env.local
+
+# Coverage / Logs
+coverage
+logs
+*.log
+
+# OS
+.DS_Store
+
+# Docker volumes
+docker-data/
