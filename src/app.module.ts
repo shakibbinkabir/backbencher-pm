@@ -14,6 +14,10 @@ import { Task } from './tasks/task.entity';
 import { TasksModule } from './tasks/tasks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SearchModule } from './search/search.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { ReportsModule } from './reports/reports.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { MetricsInterceptor } from './metrics/metrics.interceptor';
 import { redisStore } from 'cache-manager-redis-store';
 
 @Module({
@@ -64,19 +68,25 @@ import { redisStore } from 'cache-manager-redis-store';
         };
       }
     }),
-    GraphQLModule.forRoot<ApolloDriverConfig>({
-      driver: ApolloDriver,
-      autoSchemaFile: true,
-      sortSchema: true,
-      playground: true,
-      path: '/graphql'
-    }),
+    // GraphQLModule.forRoot<ApolloDriverConfig>({
+    //   driver: ApolloDriver,
+    //   autoSchemaFile: true,
+    //   sortSchema: true,
+    //   playground: true,
+    //   path: '/graphql'
+    // }),
     HealthModule,
     UsersModule,
     AuthModule,
     NotificationsModule,
     SearchModule,
+    MetricsModule,
+    ReportsModule,
     TasksModule
+  ],
+  providers: [
+    { provide: APP_INTERCEPTOR, useExisting: MetricsInterceptor },
+    MetricsInterceptor
   ]
 })
 export class AppModule {}
