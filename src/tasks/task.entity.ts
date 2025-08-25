@@ -30,7 +30,7 @@ export class Task {
   priority!: TaskPriority;
 
   @Field(() => Date, { nullable: true })
-  @Column('datetime', { nullable: true })
+  @Column('timestamp', { nullable: true })
   dueDate?: Date | null;
 
   @Field(() => Number, { nullable: true, description: 'Estimated hours' })
