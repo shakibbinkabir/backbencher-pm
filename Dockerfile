@@ -1,17 +1,23 @@
-# Production build for deployment platforms (Render/Railway)
+# Stage 1: builder
 FROM node:20-alpine AS builder
 WORKDIR /app
+
+# Install deps with legacy peer resolution to avoid ERESOLVE on apollo packages
 COPY package*.json ./
-RUN npm install
+RUN npm config set legacy-peer-deps true && npm install
+
+# Copy sources and build
 COPY nest-cli.json tsconfig*.json ./
 COPY src ./src
 RUN npm run build
 
+# Stage 2: runner
 FROM node:20-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/package*.json ./
-RUN npm install --omit=dev
+
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+
+ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["node", "dist/main.js"]
