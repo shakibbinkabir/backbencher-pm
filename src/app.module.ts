@@ -1,10 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/graphql';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { GraphQLModule, Resolver, Query } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { HealthModule } from './health/health.module';
+import { APP_GUARD } from '@nestjs/core';
+
+@Resolver()
+class AppResolver {
+  @Query(() => String, { name: 'hello' })
+  hello() {
+    return 'ok';
+  }
+}
 
 @Module({
   imports: [
@@ -19,6 +28,10 @@ import { HealthModule } from './health/health.module';
       path: '/graphql'
     }),
     HealthModule
+  ],
+  providers: [
+  { provide: APP_GUARD, useClass: ThrottlerGuard },
+  AppResolver
   ]
 })
 export class AppModule {}
