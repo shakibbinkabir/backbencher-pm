@@ -2,13 +2,21 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/graphql';
+import { GraphQLModule, Resolver, Query } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HealthModule } from './health/health.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { User } from './users/user.entity';
+
+@Resolver()
+class AppResolver {
+  @Query(() => String)
+  hello() {
+    return 'Hello from GraphQL!';
+  }
+}
 
 @Module({
   imports: [
@@ -52,6 +60,7 @@ import { User } from './users/user.entity';
     HealthModule,
     UsersModule,
     AuthModule
-  ]
+  ],
+  providers: [AppResolver]
 })
 export class AppModule {}
