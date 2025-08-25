@@ -6,10 +6,17 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { DependencyGraphService } from './dependency-graph.service';
+import { SchedulingService } from './scheduling.service';
+import { AssignmentResultType } from './types';
 
 @Resolver()
 export class TasksResolver {
-  constructor(private readonly service: TasksService) {}
+  constructor(
+    private readonly service: TasksService,
+    private readonly dg: DependencyGraphService,
+    private readonly scheduler: SchedulingService
+  ) {}
 
   // Projects
   @Query(() => [Project])
@@ -65,5 +72,17 @@ export class TasksResolver {
   @Mutation(() => Task)
   updateTask(@Args('id') id: string, @Args('input') input: UpdateTaskDto) {
     return this.service.updateTask(id, input);
+  }
+
+  // Dependencies
+  @Query(() => [Task], { description: 'Topologically ordered tasks for a project' })
+  async dependencyOrder(@Args('projectId') projectId: string) {
+    return this.dg.topologicalOrderForProject(projectId);
+  }
+
+  // Scheduling
+  @Mutation(() => [AssignmentResultType], { description: 'Schedule tasks for a project; commit persists assignments if true' })
+  async scheduleProject(@Args('projectId') projectId: string, @Args('commit', { type: () => Boolean, nullable: true }) commit?: boolean) {
+    return this.scheduler.scheduleProject(projectId, !!commit);
   }
 }

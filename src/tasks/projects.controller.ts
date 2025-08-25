@@ -7,10 +7,17 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
+import { DependencyGraphService } from './dependency-graph.service';
+import { SchedulingService } from './scheduling.service';
+import { Task } from './task.entity';
 
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly service: TasksService) {}
+  constructor(
+    private readonly service: TasksService,
+    private readonly dg: DependencyGraphService,
+    private readonly scheduler: SchedulingService
+  ) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.MANAGER)
@@ -44,5 +51,30 @@ export class ProjectsController {
   async remove(@Param('id') id: string) {
     await this.service.deleteProject(id);
     return { success: true };
+  }
+
+  // Dependency validation
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/validate-deps')
+  async validateDeps(@Param('id') id: string) {
+    return this.dg.validateProjectGraph(id);
+  }
+
+  // Topological order
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/order')
+  async order(@Param('id') id: string) {
+  const tasks = await this.dg.topologicalOrderForProject(id);
+  return tasks.map((t: Task) => ({ id: t.id, title: t.title }));
+  }
+
+  // Scheduling
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Post(':id/schedule')
+  async schedule(@Param('id') id: string, @Query('commit') commit?: string) {
+    const doCommit = (commit || '').toLowerCase() === 'true';
+    const results = await this.scheduler.scheduleProject(id, doCommit);
+    return { committed: doCommit, results };
   }
 }

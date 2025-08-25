@@ -1,6 +1,6 @@
-# Backbencher PM — Phase 2 (Projects & Tasks)
+# Backbencher PM — Phase 3 (Dependencies & Scheduler)
 
-This phase adds core domain features: Projects and Tasks with REST and GraphQL, including dependencies, assignees, pagination, and sorting.
+This phase adds dependency resolution (topological sort with cycle detection) and a basic scheduler that assigns tasks by priority, required skills, and user capacity. It extends Phase 2 models minimally and exposes REST + GraphQL APIs.
 
 ## REST endpoints
 
@@ -12,10 +12,13 @@ Auth required (Bearer token). RBAC: ADMIN/MANAGER can create/update/delete; auth
   - GET `/projects/:id`
   - PATCH `/projects/:id` (ADMIN/MANAGER)
   - DELETE `/projects/:id` (ADMIN/MANAGER)
+  - POST `/projects/:id/validate-deps` — validate the dependency graph (detect cycles)
+  - GET `/projects/:id/order` — get topological order of tasks (id, title)
+  - POST `/projects/:id/schedule?commit=true|false` (ADMIN/MANAGER) — preview or commit scheduling results
 
 - Tasks
   - POST `/tasks` (ADMIN/MANAGER)
-    - body: `{ projectId, title, description?, status?, priority?, dueDate?, estimate?, timeSpent?, assigneeId?, dependencyIds?, tags? }`
+  - body: `{ projectId, title, description?, status?, priority?, dueDate?, estimate?, timeSpent?, assigneeId?, dependencyIds?, tags?, requiredSkills? }`
   - GET `/tasks?projectId=<id>&status=TODO&priority=HIGH&assigneeId=<id>&page=1&limit=20&sort=createdAt:desc`
   - GET `/tasks/:id`
   - PATCH `/tasks/:id` (ADMIN/MANAGER)
@@ -35,17 +38,25 @@ Playground at `/graphql`.
   - `project(id: String!): Project`
   - `tasks(projectId, status, priority, assigneeId, page, limit, sort): [Task]`
   - `task(id: String!): Task`
+  - `dependencyOrder(projectId: String!): [Task]` — tasks in topological order
 
 - Mutations:
   - `createProject(input: CreateProjectDto): Project`
   - `updateProject(id: String!, input: UpdateProjectDto): Project`
   - `createTask(input: CreateTaskDto): Task`
   - `updateTask(id: String!, input: UpdateTaskDto): Task`
+  - `scheduleProject(projectId: String!, commit?: Boolean): [AssignmentResultType]`
 
-## Entities
+## Entities & Model extensions
 
 - Project: `id, name, description?, createdAt, updatedAt, tasks[]`
-- Task: `id, projectId, title, description?, status, priority, dueDate?, estimate, timeSpent, assigneeId?, dependencies[], createdAt, updatedAt`
+- Task: `id, projectId, title, description?, status, priority, dueDate?, estimate, timeSpent, assigneeId?, dependencies[], requiredSkills?, createdAt, updatedAt`
+- User: `id, email, roles[], skills?, weeklyCapacityHours, assignedHours, createdAt, updatedAt`
+
+Notes:
+- `requiredSkills` and `skills` are simple arrays (stored as simple-array in DB).
+- `weeklyCapacityHours` defaults to 40; scheduler keeps a virtual `assignedHours` counter.
+- Topological sort uses Kahn’s algorithm; cycle detection via DFS.
 
 ## Quick test flow
 
@@ -63,7 +74,7 @@ Playground at `/graphql`.
 5. List tasks with filters and pagination.
 6. Try GraphQL queries/mutations.
 
-## E2E tests
+## Tests
 
 Run:
 ```
@@ -75,7 +86,23 @@ The test uses SQLite in-memory DB and covers:
 - Project creation
 - Task creation with dependencies
 - Listing, updating, GraphQL fetch, and deletion
+- Dependency graph unit test (topo order and cycle detection)
+- Scheduling workflow (preview and commit)
 
-## Next
+## Try it
 
-Phase 3 will add dependency resolution (topological sort) and a basic scheduler that assigns tasks by priority/skills/availability.
+1. Install and build:
+```
+npm install
+npm run build
+```
+2. Run tests:
+```
+npm test
+npm run e2e
+```
+
+3. Dev server (optional):
+```
+npm run start:dev
+```

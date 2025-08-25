@@ -6,11 +6,13 @@ import { TasksService } from './tasks.service';
 import { ProjectsController } from './projects.controller';
 import { TasksController } from './tasks.controller';
 import { TasksResolver } from './tasks.resolver';
+import { DependencyGraphService } from './dependency-graph.service';
+import { SchedulingService } from './scheduling.service';
 import { User } from '../users/user.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Project, Task, User])],
-  providers: [TasksService, TasksResolver],
+  providers: [TasksService, TasksResolver, DependencyGraphService, SchedulingService],
   controllers: [ProjectsController, TasksController]
 })
 export class TasksModule {}

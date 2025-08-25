@@ -84,6 +84,7 @@ export class TasksService {
       estimate: dto.estimate ?? 0,
       timeSpent: dto.timeSpent ?? 0,
       tags: dto.tags,
+  requiredSkills: dto.requiredSkills,
       projectId: dto.projectId,
       assigneeId: dto.assigneeId ?? null,
       dependencies
@@ -145,7 +146,8 @@ export class TasksService {
       dueDate: dto.dueDate ? new Date(dto.dueDate) : t.dueDate,
       estimate: dto.estimate ?? t.estimate,
       timeSpent: dto.timeSpent ?? t.timeSpent,
-      tags: dto.tags ?? t.tags
+  tags: dto.tags ?? t.tags,
+  requiredSkills: dto.requiredSkills ?? t.requiredSkills
     });
 
     return this.tasks.save(t);

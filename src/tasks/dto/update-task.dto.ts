@@ -1,15 +1,15 @@
 import { IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min, ArrayUnique } from 'class-validator';
-import { InputType, Field } from '@nestjs/graphql';
 import { TaskPriority, TaskStatus } from '../task.enums';
+import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
 export class UpdateTaskDto {
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   title?: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
   description?: string;
@@ -24,7 +24,7 @@ export class UpdateTaskDto {
   @IsEnum(TaskPriority)
   priority?: TaskPriority;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsDateString()
   dueDate?: string;
@@ -43,7 +43,7 @@ export class UpdateTaskDto {
   @Max(10000)
   timeSpent?: number;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @IsOptional()
   @IsUUID()
   assigneeId?: string;
@@ -61,4 +61,12 @@ export class UpdateTaskDto {
   @ArrayUnique()
   @IsString({ each: true })
   tags?: string[];
+
+  // Required skills for scheduling
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  requiredSkills?: string[];
 }
