@@ -2,7 +2,7 @@
   "name": "backbencher-pm",
   "version": "0.1.0",
   "private": true,
-  "description": "Collaborative project management tool - NestJS (Realtime)",
+  "description": "Collaborative project management tool - NestJS (Search)",
   "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",
@@ -20,6 +20,7 @@
     "ws:test": "ts-node -T scripts/ws-test.ts"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.19.0",
     "@nestjs/apollo": "^12.2.2",
     "@nestjs/cache-manager": "^2.3.0",
     "@nestjs/common": "^10.4.0",
@@ -52,6 +53,7 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "sqlite3": "^5.1.7",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {

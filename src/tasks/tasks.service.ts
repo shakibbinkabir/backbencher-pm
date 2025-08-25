@@ -9,6 +9,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SearchService } from '../search/search.service';
 import { User } from '../users/user.entity';
 
 @Injectable()
@@ -19,12 +20,18 @@ export class TasksService {
     @InjectRepository(User) private readonly users: Repository<User>,
     @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
+    private readonly searchService: SearchService,
   ) {}
 
   // Projects
   async createProject(dto: CreateProjectDto): Promise<Project> {
     const p = this.projects.create(dto);
-    return this.projects.save(p);
+    const savedProject = await this.projects.save(p);
+    
+    // Index project for search
+    await this.searchService.indexProject(savedProject);
+    
+    return savedProject;
   }
 
   async listProjects(pq: PaginationQueryDto): Promise<{ data: Project[]; total: number; page: number; limit: number }> {
@@ -48,12 +55,20 @@ export class TasksService {
   async updateProject(id: string, dto: UpdateProjectDto): Promise<Project> {
     const p = await this.getProject(id);
     Object.assign(p, dto);
-    return this.projects.save(p);
+    const updatedProject = await this.projects.save(p);
+    
+    // Update project in search index
+    await this.searchService.indexProject(updatedProject);
+    
+    return updatedProject;
   }
 
   async deleteProject(id: string): Promise<void> {
     const res = await this.projects.delete(id);
     if (!res.affected) throw new NotFoundException('Project not found');
+    
+    // Remove project from search index
+    await this.searchService.removeProject(id);
   }
 
   // Tasks
@@ -93,6 +108,9 @@ export class TasksService {
       dependencies
     });
     const savedTask = await this.tasks.save(entity);
+    
+    // Index task for search
+    await this.searchService.indexTask(savedTask);
     
     // Emit real-time notification
     await this.notificationsService.notifyTaskCreated(savedTask, dto.projectId);
@@ -160,6 +178,9 @@ export class TasksService {
 
     const updatedTask = await this.tasks.save(t);
     
+    // Update task in search index
+    await this.searchService.indexTask(updatedTask);
+    
     // Emit real-time notification
     if (dto.status && dto.status !== t.status) {
       await this.notificationsService.notifyTaskStatusChanged(updatedTask, t.projectId);
@@ -174,6 +195,9 @@ export class TasksService {
     const task = await this.getTask(id);
     const res = await this.tasks.delete(id);
     if (!res.affected) throw new NotFoundException('Task not found');
+    
+    // Remove task from search index
+    await this.searchService.removeTask(id);
     
     // Emit real-time notification
     await this.notificationsService.notifyTaskDeleted(id, task.projectId, task);

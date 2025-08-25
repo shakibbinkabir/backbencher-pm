@@ -9,6 +9,7 @@ import { HealthModule } from './health/health.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SearchModule } from './search/search.module';
 import { User } from './users/user.entity';
 import { Project } from './tasks/project.entity';
 import { Task } from './tasks/task.entity';
@@ -63,7 +64,8 @@ import { TasksModule } from './tasks/tasks.module';
     UsersModule,
     AuthModule,
     TasksModule,
-    NotificationsModule
+    NotificationsModule,
+    SearchModule
   ]
 })
 export class AppModule {}

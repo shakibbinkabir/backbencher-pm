@@ -1,8 +1,81 @@
-# Backbencher PM — Phase 4 (Real-time Notifications)
+# Backbencher PM — Phase 5 (Elasticsearch Search)
 
-This phase adds real-time WebSocket notifications with Socket.IO and Redis adapter for horizontal scaling. Users receive instant updates when tasks and projects are created, updated, or deleted.
+This phase adds full-text search capabilities with Elasticsearch integration. Users can search across projects and tasks with autocomplete functionality and advanced filtering.
 
-## Real-time Features
+## Search Features
+
+- **Full-text Search**: Search across project and task titles and descriptions
+- **Elasticsearch Integration**: Uses @elastic/elasticsearch for powerful search capabilities
+- **Autocomplete**: Completion suggester for instant search suggestions
+- **Graceful Degradation**: Falls back gracefully when Elasticsearch is unavailable
+- **Real-time Indexing**: Automatic indexing on CRUD operations
+- **Advanced Filtering**: Filter by type, status, priority with search queries
+
+## Search API Endpoints
+
+### REST API
+- `GET /search?q=query&type=project|task&status=TODO&priority=HIGH&limit=10&offset=0`
+- `GET /search/autocomplete?q=query&limit=5`
+
+### GraphQL API
+- `search(query, type, status, priority, limit, offset): SearchResults`
+- `autocomplete(query, limit): AutocompleteResults`
+
+## Search Response Structure
+
+### Search Results
+```json
+{
+  "results": [
+    {
+      "id": "uuid",
+      "type": "project|task",
+      "title": "Title",
+      "description": "Description",
+      "status": "TODO",
+      "priority": "HIGH", 
+      "score": 1.5,
+      "highlight": {
+        "title": ["highlighted <em>text</em>"],
+        "description": ["highlighted <em>content</em>"]
+      }
+    }
+  ],
+  "total": 10,
+  "elasticsearchAvailable": true
+}
+```
+
+### Autocomplete Results
+```json
+{
+  "suggestions": [
+    {
+      "text": "Completion text",
+      "type": "project|task",
+      "id": "uuid"
+    }
+  ],
+  "elasticsearchAvailable": true
+}
+```
+
+## Environment Variables
+
+Add to your `.env` file:
+```
+ELASTICSEARCH_URL=http://localhost:9200
+```
+
+## Elasticsearch Configuration
+
+The search service automatically creates indices with proper mappings on startup:
+- `projects` index with completion suggester on title
+- `tasks` index with completion suggester on title
+- Full-text search on title and description fields
+- Keyword fields for exact filtering (status, priority, etc.)
+
+## Real-time Features (Phase 4)
 
 - **WebSocket Gateway**: JWT-authenticated connections
 - **Room Management**: Users join project/task-specific rooms
@@ -57,6 +130,10 @@ const socket = io('ws://localhost:3000', {
 
 Auth required (Bearer token). RBAC: ADMIN/MANAGER can create/update/delete; authenticated users can read.
 
+- Search
+  - GET `/search?q=query&type=project|task&status=TODO&priority=HIGH&limit=10&offset=0`
+  - GET `/search/autocomplete?q=query&limit=5`
+
 - Projects
   - POST `/projects` (ADMIN/MANAGER)
   - GET `/projects?page=1&limit=20&sort=createdAt:desc`
@@ -85,6 +162,8 @@ Notes:
 Playground at `/graphql`.
 
 - Queries:
+  - `search(query: String!, type: String, status: String, priority: String, limit: Int, offset: Int): SearchResults`
+  - `autocomplete(query: String!, limit: Int): AutocompleteResults`
   - `projects(page, limit, sort): [Project]`
   - `project(id: String!): Project`
   - `tasks(projectId, status, priority, assigneeId, page, limit, sort): [Task]`
@@ -123,7 +202,11 @@ Notes:
 3. Create a project with POST `/projects`.
 4. Create tasks and link `dependencyIds`.
 5. List tasks with filters and pagination.
-6. Try GraphQL queries/mutations.
+6. Try search functionality:
+   - Search: GET `/search?q=project name`
+   - Autocomplete: GET `/search/autocomplete?q=task`
+   - GraphQL search queries in the playground
+7. Try GraphQL queries/mutations.
 
 ## Tests
 

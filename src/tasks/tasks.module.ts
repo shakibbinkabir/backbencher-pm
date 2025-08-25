@@ -9,12 +9,14 @@ import { TasksResolver } from './tasks.resolver';
 import { DependencyGraphService } from './dependency-graph.service';
 import { SchedulingService } from './scheduling.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SearchModule } from '../search/search.module';
 import { User } from '../users/user.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Project, Task, User]),
-    forwardRef(() => NotificationsModule)
+    forwardRef(() => NotificationsModule),
+    SearchModule
   ],
   providers: [TasksService, TasksResolver, DependencyGraphService, SchedulingService],
   controllers: [ProjectsController, TasksController]
