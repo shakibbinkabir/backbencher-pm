@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Project } from './project.entity';
 import { Task } from './task.entity';
@@ -8,10 +8,14 @@ import { TasksController } from './tasks.controller';
 import { TasksResolver } from './tasks.resolver';
 import { DependencyGraphService } from './dependency-graph.service';
 import { SchedulingService } from './scheduling.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { User } from '../users/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Project, Task, User])],
+  imports: [
+    TypeOrmModule.forFeature([Project, Task, User]),
+    forwardRef(() => NotificationsModule)
+  ],
   providers: [TasksService, TasksResolver, DependencyGraphService, SchedulingService],
   controllers: [ProjectsController, TasksController]
 })

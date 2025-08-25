@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test Client</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            word-break: break-all;
+        }
+        .notification {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        .error {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+        }
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Test Client - Backbencher PM</h1>
+    
+    <div id="status" class="status disconnected">
+        Status: Disconnected
+    </div>
+
+    <div>
+        <h3>Connection</h3>
+        <input type="text" id="tokenInput" placeholder="Enter JWT Token (optional for testing)" style="width: 400px;">
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+    </div>
+
+    <div>
+        <h3>Room Management</h3>
+        <input type="text" id="roomInput" placeholder="Room name (e.g., project_123)" style="width: 200px;">
+        <button onclick="joinRoom()">Join Room</button>
+        <button onclick="leaveRoom()">Leave Room</button>
+    </div>
+
+    <div>
+        <h3>Test Functions</h3>
+        <button onclick="ping()">Ping Server</button>
+        <button onclick="clearMessages()">Clear Messages</button>
+    </div>
+
+    <div>
+        <h3>Messages</h3>
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        let socket = null;
+        let isConnected = false;
+
+        function addMessage(type, message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            isConnected = connected;
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = 'Status: Connected';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = 'Status: Disconnected';
+            }
+        }
+
+        function connect() {
+            if (socket) {
+                socket.disconnect();
+            }
+
+            const token = document.getElementById('tokenInput').value || 'test-token';
+            
+            addMessage('message', 'Attempting to connect...');
+
+            socket = io('ws://localhost:3000', {
+                auth: {
+                    token: token
+                },
+                transports: ['websocket', 'polling']
+            });
+
+            socket.on('connect', () => {
+                updateStatus(true);
+                addMessage('message', `Connected with socket ID: ${socket.id}`);
+            });
+
+            socket.on('connected', (data) => {
+                addMessage('message', `Connection confirmed: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('disconnect', (reason) => {
+                updateStatus(false);
+                addMessage('message', `Disconnected: ${reason}`);
+            });
+
+            socket.on('connect_error', (error) => {
+                addMessage('error', `Connection error: ${error.message}`);
+            });
+
+            socket.on('notification', (data) => {
+                addMessage('notification', `🔔 Notification: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('room_joined', (data) => {
+                addMessage('message', `✅ Joined room: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('room_left', (data) => {
+                addMessage('message', `❌ Left room: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('pong', (data) => {
+                addMessage('message', `🏓 Pong: ${JSON.stringify(data)}`);
+            });
+
+            socket.on('error', (error) => {
+                addMessage('error', `Socket error: ${JSON.stringify(error)}`);
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            updateStatus(false);
+        }
+
+        function joinRoom() {
+            if (!isConnected || !socket) {
+                addMessage('error', 'Not connected to server');
+                return;
+            }
+
+            const room = document.getElementById('roomInput').value;
+            if (!room) {
+                addMessage('error', 'Please enter a room name');
+                return;
+            }
+
+            socket.emit('join_room', { room: room });
+            addMessage('message', `Attempting to join room: ${room}`);
+        }
+
+        function leaveRoom() {
+            if (!isConnected || !socket) {
+                addMessage('error', 'Not connected to server');
+                return;
+            }
+
+            const room = document.getElementById('roomInput').value;
+            if (!room) {
+                addMessage('error', 'Please enter a room name');
+                return;
+            }
+
+            socket.emit('leave_room', { room: room });
+            addMessage('message', `Attempting to leave room: ${room}`);
+        }
+
+        function ping() {
+            if (!isConnected || !socket) {
+                addMessage('error', 'Not connected to server');
+                return;
+            }
+
+            socket.emit('ping');
+            addMessage('message', 'Sent ping to server');
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        // Initialize
+        addMessage('message', 'WebSocket test client loaded. Click Connect to start.');
+    </script>
+</body>
+</html>

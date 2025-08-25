@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Project } from './project.entity';
@@ -8,6 +8,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 import { User } from '../users/user.entity';
 
 @Injectable()
@@ -15,7 +16,9 @@ export class TasksService {
   constructor(
     @InjectRepository(Project) private readonly projects: Repository<Project>,
     @InjectRepository(Task) private readonly tasks: Repository<Task>,
-    @InjectRepository(User) private readonly users: Repository<User>
+    @InjectRepository(User) private readonly users: Repository<User>,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // Projects
@@ -89,7 +92,12 @@ export class TasksService {
       assigneeId: dto.assigneeId ?? null,
       dependencies
     });
-    return this.tasks.save(entity);
+    const savedTask = await this.tasks.save(entity);
+    
+    // Emit real-time notification
+    await this.notificationsService.notifyTaskCreated(savedTask, dto.projectId);
+    
+    return savedTask;
   }
 
   async getTask(id: string): Promise<Task> {
@@ -150,11 +158,24 @@ export class TasksService {
   requiredSkills: dto.requiredSkills ?? t.requiredSkills
     });
 
-    return this.tasks.save(t);
+    const updatedTask = await this.tasks.save(t);
+    
+    // Emit real-time notification
+    if (dto.status && dto.status !== t.status) {
+      await this.notificationsService.notifyTaskStatusChanged(updatedTask, t.projectId);
+    } else {
+      await this.notificationsService.notifyTaskUpdated(updatedTask, t.projectId);
+    }
+    
+    return updatedTask;
   }
 
   async deleteTask(id: string): Promise<void> {
+    const task = await this.getTask(id);
     const res = await this.tasks.delete(id);
     if (!res.affected) throw new NotFoundException('Task not found');
+    
+    // Emit real-time notification
+    await this.notificationsService.notifyTaskDeleted(id, task.projectId, task);
   }
 }

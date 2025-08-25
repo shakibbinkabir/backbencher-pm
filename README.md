@@ -1,6 +1,57 @@
-# Backbencher PM — Phase 3 (Dependencies & Scheduler)
+# Backbencher PM — Phase 4 (Real-time Notifications)
 
-This phase adds dependency resolution (topological sort with cycle detection) and a basic scheduler that assigns tasks by priority, required skills, and user capacity. It extends Phase 2 models minimally and exposes REST + GraphQL APIs.
+This phase adds real-time WebSocket notifications with Socket.IO and Redis adapter for horizontal scaling. Users receive instant updates when tasks and projects are created, updated, or deleted.
+
+## Real-time Features
+
+- **WebSocket Gateway**: JWT-authenticated connections
+- **Room Management**: Users join project/task-specific rooms
+- **Event Broadcasting**: Real-time notifications for CRUD operations
+- **Redis Adapter**: Horizontal scaling support for multiple server instances
+
+## WebSocket Events
+
+### Client Events (Incoming)
+- `join_room` - Join a project or task room
+- `leave_room` - Leave a room
+- `ping` - Health check
+
+### Server Events (Outgoing)
+- `connected` - Connection confirmation with user ID
+- `notification` - Real-time notifications for task/project changes
+- `room_joined` - Confirmation of room join
+- `room_left` - Confirmation of room leave
+- `pong` - Response to ping
+- `error` - Error messages
+
+### Notification Structure
+```json
+{
+  "type": "task|project|user",
+  "action": "created|updated|deleted|assigned|completed|status_changed",
+  "data": { /* entity data */ },
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "userId": "optional-user-id",
+  "projectId": "optional-project-id",
+  "taskId": "optional-task-id"
+}
+```
+
+## WebSocket Connection
+
+Connect to `ws://localhost:3000` with JWT authentication:
+
+```javascript
+const socket = io('ws://localhost:3000', {
+  auth: { token: 'your-jwt-token' }
+});
+```
+
+## Room Structure
+
+- `user_{userId}` - Personal notifications
+- `project_{projectId}` - Project-wide notifications  
+- `task_{taskId}` - Task-specific notifications
 
 ## REST endpoints
 
