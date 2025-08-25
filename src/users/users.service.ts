@@ -1,6 +1,6 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcryptjs';
@@ -38,5 +38,12 @@ export class UsersService {
   async listAll(): Promise<Omit<User, 'password'>[]> {
     const all = await this.repo.find();
     return all.map(({ password, ...rest }) => rest);
+  }
+
+  // Batch helper for DataLoader
+  async findManyByIds(ids: string[]): Promise<User[]> {
+    if (!ids.length) return [];
+    const rows = await this.repo.findBy({ id: In(ids) });
+    return rows;
   }
 }

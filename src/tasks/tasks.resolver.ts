@@ -1,4 +1,5 @@
-import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
+import { Resolver, Query, Args, Mutation, ResolveField, Parent } from '@nestjs/graphql';
+import { Inject } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { Project } from './project.entity';
 import { Task } from './task.entity';
@@ -9,6 +10,9 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { DependencyGraphService } from './dependency-graph.service';
 import { SchedulingService } from './scheduling.service';
 import { AssignmentResultType } from './types';
+import DataLoader from 'dataloader';
+import { USER_LOADER, TASKS_BY_PROJECT_LOADER } from './loaders';
+import { User } from '../users/user.entity';
 
 @Resolver()
 export class TasksResolver {
@@ -84,5 +88,16 @@ export class TasksResolver {
   @Mutation(() => [AssignmentResultType], { description: 'Schedule tasks for a project; commit persists assignments if true' })
   async scheduleProject(@Args('projectId') projectId: string, @Args('commit', { type: () => Boolean, nullable: true }) commit?: boolean) {
     return this.scheduler.scheduleProject(projectId, !!commit);
+  }
+
+  // GraphQL DataLoader fields
+  @ResolveField(() => User, { name: 'assignee', nullable: true })
+  async assignee(@Parent() task: Task, @Inject(USER_LOADER) userLoader: DataLoader<string, User | null>) {
+    return task.assigneeId ? userLoader.load(task.assigneeId) : null;
+  }
+
+  @ResolveField(() => [Task], { name: 'tasks' })
+  async projectTasks(@Parent() project: Project, @Inject(TASKS_BY_PROJECT_LOADER) loader: DataLoader<string, Task[]>) {
+    return loader.load(project.id);
   }
 }

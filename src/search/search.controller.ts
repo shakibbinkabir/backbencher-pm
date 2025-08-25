@@ -1,8 +1,9 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SearchService, SearchResult, AutocompleteResult } from './search.service';
 import { SearchQueryDto, AutocompleteQueryDto } from './dto/search.dto';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('search')
 @ApiBearerAuth()
@@ -12,6 +13,8 @@ export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(5)
   @ApiOperation({ summary: 'Search projects and tasks' })
   @ApiResponse({ 
     status: 200, 
@@ -61,6 +64,8 @@ export class SearchController {
   }
 
   @Get('autocomplete')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(5)
   @ApiOperation({ summary: 'Get autocomplete suggestions' })
   @ApiResponse({ 
     status: 200, 

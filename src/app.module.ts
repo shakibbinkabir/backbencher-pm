@@ -8,17 +8,33 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { HealthModule } from './health/health.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { NotificationsModule } from './notifications/notifications.module';
-import { SearchModule } from './search/search.module';
 import { User } from './users/user.entity';
 import { Project } from './tasks/project.entity';
 import { Task } from './tasks/task.entity';
 import { TasksModule } from './tasks/tasks.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { SearchModule } from './search/search.module';
+import { redisStore } from 'cache-manager-redis-store';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    CacheModule.register({ isGlobal: true }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (cfg: ConfigService) => {
+        const url = cfg.get<string>('REDIS_URL');
+        if (url) {
+          return {
+            store: await redisStore({ url }),
+            ttl: 0 // per-route TTLs; 0 means no default expiry
+          } as any;
+        }
+        return {
+          ttl: 0
+        };
+      }
+    }),
     ThrottlerModule.forRoot([
       {
         ttl: Number(process.env.THROTTLE_TTL) || 60,
@@ -36,12 +52,7 @@ import { TasksModule } from './tasks/tasks.module';
             database: ':memory:',
             dropSchema: true,
             entities,
-            synchronize: true,
-            // SQLite specific configuration
-            extra: {
-              // This helps with date handling in SQLite
-              timezone: 'utc'
-            }
+            synchronize: true
           };
         }
         const url = cfg.get<string>('DATABASE_URL') || 'postgres://postgres:postgres@localhost:5432/pm';
@@ -49,7 +60,7 @@ import { TasksModule } from './tasks/tasks.module';
           type: 'postgres',
           url,
           entities,
-          synchronize: true // NOTE: enable migrations later; acceptable for Phase 2
+          synchronize: true
         };
       }
     }),
@@ -63,9 +74,9 @@ import { TasksModule } from './tasks/tasks.module';
     HealthModule,
     UsersModule,
     AuthModule,
-    TasksModule,
     NotificationsModule,
-    SearchModule
+    SearchModule,
+    TasksModule
   ]
 })
 export class AppModule {}

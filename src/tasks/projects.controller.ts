@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -9,6 +9,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { DependencyGraphService } from './dependency-graph.service';
 import { SchedulingService } from './scheduling.service';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { Task } from './task.entity';
 
 @Controller('projects')
@@ -27,12 +28,16 @@ export class ProjectsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(10)
   @Get()
   list(@Query() pq: PaginationQueryDto) {
     return this.service.listProjects(pq);
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30)
   @Get(':id')
   get(@Param('id') id: string) {
     return this.service.getProject(id);
@@ -55,6 +60,8 @@ export class ProjectsController {
 
   // Dependency validation
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(15)
   @Post(':id/validate-deps')
   async validateDeps(@Param('id') id: string) {
     return this.dg.validateProjectGraph(id);
@@ -62,6 +69,8 @@ export class ProjectsController {
 
   // Topological order
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(20)
   @Get(':id/order')
   async order(@Param('id') id: string) {
   const tasks = await this.dg.topologicalOrderForProject(id);
