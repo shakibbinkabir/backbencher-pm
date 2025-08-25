@@ -1,25 +1,47 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { GraphQLModule, Resolver, Query } from '@nestjs/graphql';
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/graphql';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { HealthModule } from './health/health.module';
-import { APP_GUARD } from '@nestjs/core';
-
-@Resolver()
-class AppResolver {
-  @Query(() => String, { name: 'hello' })
-  hello() {
-    return 'ok';
-  }
-}
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
+import { User } from './users/user.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     CacheModule.register({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: Number(process.env.THROTTLE_TTL) || 60, limit: Number(process.env.THROTTLE_LIMIT) || 120 }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: Number(process.env.THROTTLE_TTL) || 60,
+        limit: Number(process.env.THROTTLE_LIMIT) || 120
+      }
+    ]),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => {
+        const isTest = cfg.get<string>('NODE_ENV') === 'test';
+        if (isTest) {
+          return {
+            type: 'sqlite',
+            database: ':memory:',
+            dropSchema: true,
+            entities: [User],
+            synchronize: true
+          };
+        }
+        const url = cfg.get<string>('DATABASE_URL') || 'postgres://postgres:postgres@localhost:5432/pm';
+        return {
+          type: 'postgres',
+          url,
+          entities: [User],
+          synchronize: true // NOTE: enable migrations later; okay for Phase 1
+        };
+      }
+    }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: true,
@@ -27,11 +49,9 @@ class AppResolver {
       playground: true,
       path: '/graphql'
     }),
-    HealthModule
-  ],
-  providers: [
-  { provide: APP_GUARD, useClass: ThrottlerGuard },
-  AppResolver
+    HealthModule,
+    UsersModule,
+    AuthModule
   ]
 })
 export class AppModule {}
