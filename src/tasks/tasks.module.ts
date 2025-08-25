@@ -11,10 +11,11 @@ import { DependencyGraphService } from './dependency-graph.service';
 import { SchedulingService } from './scheduling.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SearchModule } from '../search/search.module';
+import { UsersModule } from '../users/users.module';
 import { loadersProviders } from './loaders';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Project, Task, User]), NotificationsModule, SearchModule],
+  imports: [TypeOrmModule.forFeature([Project, Task, User]), NotificationsModule, SearchModule, UsersModule],
   providers: [TasksService, TasksResolver, DependencyGraphService, SchedulingService, ...loadersProviders],
   controllers: [ProjectsController, TasksController]
 })
